@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vault - PassVault</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="vault-layout">
+        <!-- Top Bar -->
+        <header class="topbar">
+            <div class="topbar-brand">
+                <div class="brand-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                <h1>PassVault</h1>
+            </div>
+            <div class="topbar-actions">
+                <button class="btn btn-secondary btn-sm" onclick="openImportModal()">
+                    <i class="fa-solid fa-file-import"></i> <span class="btn-text">Import</span>
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="exportPasswords()">
+                    <i class="fa-solid fa-file-export"></i> <span class="btn-text">Export</span>
+                </button>
+                <form action="{{ url_for('logout') }}" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger btn-sm">
+                        <i class="fa-solid fa-right-from-bracket"></i> <span class="btn-text">Lock</span>
+                    </button>
+                </form>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="vault-content">
+            <!-- Stats -->
+            <section class="stats-bar">
+                <div class="stat-card">
+                    <div class="stat-icon purple"><i class="fa-solid fa-key"></i></div>
+                    <div class="stat-info">
+                        <h3 id="statTotal">0</h3>
+                        <p>Total Passwords</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green"><i class="fa-solid fa-folder-open"></i></div>
+                    <div class="stat-info">
+                        <h3 id="statCategories">0</h3>
+                        <p>Categories</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="stat-info">
+                        <h3 id="statWeak">0</h3>
+                        <p>Weak Passwords</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon red"><i class="fa-solid fa-bolt"></i></div>
+                    <div class="stat-info">
+                        <h3 id="statRecent">0</h3>
+                        <p>Added Today</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Controls -->
+            <section class="toolbar">
+                <div class="toolbar-left">
+                    <div class="search-box">
+                        <span class="input-icon"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" id="searchInput" placeholder="Search by website, username, notes...">
+                    </div>
+                    <select id="categoryFilter" class="category-filter">
+                        <option value="">All Categories</option>
+                    </select>
+                </div>
+                <div class="toolbar-right">
+                    <button class="btn btn-secondary" onclick="openGeneratorModal()">
+                        <i class="fa-solid fa-gears"></i> Generate
+                    </button>
+                    <button class="btn btn-primary" onclick="openAddModal()">
+                        <i class="fa-solid fa-plus"></i> Add Entry
+                    </button>
+                </div>
+            </section>
+
+            <!-- Passwords Table -->
+            <section class="passwords-table-wrapper">
+                <table class="passwords-table">
+                    <thead>
+                        <tr>
+                            <th>Website / Username</th>
+                            <th>Password</th>
+                            <th>Category</th>
+                            <th style="width: 100px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="passwordsBody">
+                        <!-- Rendered by script.js -->
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Responsive Cards for Mobile -->
+            <section id="passwordCards" class="password-cards">
+                <!-- Rendered by script.js -->
+            </section>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="empty-state hidden">
+                <div class="empty-icon"><i class="fa-regular fa-folder-open"></i></div>
+                <h3>No passwords saved yet</h3>
+                <p>Add a new entry or import a CSV/Excel file to populate your vault.</p>
+                <button class="btn btn-primary btn-sm" onclick="openAddModal()"><i class="fa-solid fa-plus"></i> Add First Entry</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- ── Add / Edit Entry Modal ────────────────────────────── -->
+    <div id="passwordModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add Password</h2>
+                <button class="btn-icon btn-ghost" onclick="closeAllModals()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="entryWebsite">Website URL or Name *</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"><i class="fa-solid fa-globe"></i></span>
+                        <input type="text" id="entryWebsite" required placeholder="e.g. google.com">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="entryUsername">Username or Email</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"><i class="fa-regular fa-user"></i></span>
+                        <input type="text" id="entryUsername" placeholder="e.g. john@example.com">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="entryPassword">Password *</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"><i class="fa-solid fa-key"></i></span>
+                        <input type="password" id="entryPassword" required placeholder="Enter password">
+                        <button type="button" class="toggle-password" onclick="toggleFormPassword('entryPassword')"><i class="fa-regular fa-eye"></i></button>
+                    </div>
+                    <div id="strengthMeter" class="strength-meter">
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                    </div>
+                    <div id="strengthLabel" class="strength-label"></div>
+                </div>
+                <div class="form-group">
+                    <label for="entryCategory">Category</label>
+                    <div class="input-wrapper">
+                        <span class="input-icon"><i class="fa-solid fa-tag"></i></span>
+                        <input type="text" id="entryCategory" placeholder="e.g. Work, Personal, Social" value="General">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="entryNotes">Notes</label>
+                    <div class="input-wrapper">
+                        <textarea id="entryNotes" class="no-icon" placeholder="Any additional notes..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAllModals()">Cancel</button>
+                <button class="btn btn-primary" onclick="savePassword()"><i class="fa-solid fa-check"></i> Save Entry</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Generator Modal ────────────────────────────────────── -->
+    <div id="generatorModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-wand-magic-sparkles"></i> Generate Password</h2>
+                <button class="btn-icon btn-ghost" onclick="closeAllModals()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="generator-panel">
+                    <div id="generatedPassword" class="generator-output">Generating...</div>
+                    <div class="generator-controls">
+                        <div class="range-control">
+                            <label for="genLength">Length</label>
+                            <input type="range" id="genLength" min="6" max="64" value="16">
+                            <span id="genLengthValue">16</span>
+                        </div>
+                        <div class="checkbox-group">
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="genUppercase" checked>
+                                <label for="genUppercase">Uppercase (A-Z)</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="genLowercase" checked>
+                                <label for="genLowercase">Lowercase (a-z)</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="genDigits" checked>
+                                <label for="genDigits">Digits (0-9)</label>
+                            </div>
+                            <div class="checkbox-item">
+                                <input type="checkbox" id="genSymbols" checked>
+                                <label for="genSymbols">Symbols (!@#...)</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="generatePassword()"><i class="fa-solid fa-rotate"></i> Regenerate</button>
+                <button class="btn btn-secondary" onclick="copyGeneratedPassword()"><i class="fa-regular fa-clipboard"></i> Copy</button>
+                <button class="btn btn-primary" onclick="useGeneratedPassword()"><i class="fa-solid fa-check"></i> Use Password</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Import Modal ───────────────────────────────────────── -->
+    <div id="importModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-file-import"></i> Import Passwords</h2>
+                <button class="btn-icon btn-ghost" onclick="closeAllModals()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="importZone" class="import-zone">
+                    <div class="import-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                    <h3>Drag & Drop file here</h3>
+                    <p>or click to browse from your device</p>
+                    <p class="mt-4" style="font-size: 0.75rem; color: var(--text-muted);">Supports .csv, .xlsx, .xls</p>
+                    <input type="file" id="importFile" accept=".csv, .xlsx, .xls">
+                </div>
+                <div class="mt-4">
+                    <h4 style="font-size: 0.85rem; font-weight: 600; margin-bottom: 8px;"><i class="fa-solid fa-circle-info" style="color: var(--accent-info);"></i> File Columns:</h4>
+                    <p style="font-size: 0.8rem; color: var(--text-secondary);">Your file should have headers like: <strong>Website / URL</strong>, <strong>Username / Email</strong>, <strong>Password</strong>, and optional <strong>Category</strong>, <strong>Notes</strong>.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
